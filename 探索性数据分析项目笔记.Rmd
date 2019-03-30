@@ -1,0 +1,391 @@
+---
+title: "红葡萄酒质量探索性分析"
+author: "Allen"
+date: "2019年2月19日"
+output: html_document
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+# Load all of the packages that you end up using
+# in your analysis in this code chunk.
+
+# Notice that the parameter "echo" was set to FALSE for this code chunk.
+# This prevents the code from displaying in the knitted HTML output.
+# You should set echo=FALSE for all code chunks in your file.
+library(gplots)
+library(ggplot2)
+library(GGally)
+library(scales)
+library(memisc)
+library(RColorBrewer)
+library(scatterplot3d)
+library(rgl)
+library(car)
+knitr::opts_chunk$set(message = FALSE,warning = FALSE, echo = TRUE)
+```
+
+```{r echo=FALSE, Load_the_Data}
+# Load the Data
+getwd()
+setwd("J:/R/RStudio")
+RedWine <- read.csv("wineQualityReds.csv")
+str(RedWine)
+```
+
+```{r echo=FALSE}
+summary(RedWine)
+```
+
+# Univariate Plots Section
+```{r echo=FALSE, Univariate_Plots}
+ggplot(RedWine,aes(quality)) +
+  geom_histogram(binwidth = 0.5) +
+  ggtitle("Distribution of Red Wine Quality")
+```
+
+从红酒质量分布图，可以清楚的看到本数据集中大部分红酒品质在5和6，数量最少的则是质量最低的数据组。
+```{r echo=FALSE}
+ggplot(RedWine,aes(pH)) +
+  geom_histogram(fill = I("#099DD9"),
+                 color = "black") +
+  ggtitle("Distribution of Red Wine PH")
+```
+
+从pH值分布图可以清楚的看到，红酒多为酸性液体，且其pH值多在3.0~3.7之间，呈现正态分布；
+```{r echo=FALSE}
+ggplot(RedWine,aes(residual.sugar)) +
+  geom_histogram(fill = I("#099DD9"),
+                 color = "black")
+```
+
+从红酒残留的糖分图中可以看到，大部分红酒中的糖分含量在4以下，且其糖分分布图呈现长尾现象，不排除有异常值存在。
+```{r echo=FALSE}
+ggplot(RedWine,aes(alcohol)) +
+  geom_histogram(fill = I("#099DD9"),
+                 color = "black") +
+  ggtitle("Distribution of Red Wine Alcohol")
+```
+
+本数据集的红酒度数主要集中在9.5~12之间，其浓度在9.5数量最多，比市面上绝大多数的啤酒度数要低。
+```{r echo=FALSE}
+ggplot(RedWine,aes(total.sulfur.dioxide)) +
+  geom_histogram(fill = I("#099DD9"),
+                 color = "black") +
+  ggtitle("Distribution of total.sulfur.dioxide")
+```
+
+```{r echo=FALSE}
+#增加一列结合态二氧化硫
+RedWine$Bound.sulfur.dioxide <- RedWine$total.sulfur.dioxide - RedWine$free.sulfur.dioxide
+```
+
+```{r echo=FALSE}
+ggplot(RedWine,aes(fixed.acidity)) +
+  geom_histogram(fill = I("#099DD9"),
+                 color = "black") +
+  ggtitle("Distribution of fixed.acidity")
+```
+
+红酒中的固定酸度是指酒石酸晶体的含量，虽然其对红酒品质的影响众说纷纭，但它对人体确实无毒无害；本数据集的红酒酒石酸的含量呈现类似正态分布。
+```{r echo=FALSE}
+ggplot(RedWine,aes(volatile.acidity)) +
+  geom_histogram(fill = I("#099DD9"),
+                 color = "black") +
+  ggtitle("Distribution of volatile.acidity")
+```
+
+挥发性酸度指的是红酒中醋酸的含量，其值不同影响红酒的口感；若含量过高，会使葡萄酒酸味加重，影响葡萄酒的口感；该数据集中的醋酸含量存在两个波峰；
+```{r echo=FALSE}
+ggplot(RedWine,aes(citric.acid)) +
+  geom_histogram(fill = I("#099DD9"),
+                 color = "black") +
+  ggtitle("Distribution of citric.acid")
+```
+
+红酒中少量柠檬酸可以调节其新鲜度和口感；不过在本数据集中大部分红酒中的柠檬酸含量多为零，即不存在柠檬酸；
+```{r echo=FALSE}
+ggplot(RedWine,aes(chlorides)) +
+  geom_histogram(fill = I("#099DD9"),
+                 color = "black") +
+  ggtitle("Distribution of chlorides")
+```
+
+红酒中的盐含量主要是无机盐，其阳离子部分主要是钾、钠、钙、镁；其含量非常小，钙数据集中的大部分盐含量在0.07~0.09之间；
+```{r echo=FALSE}
+ggplot(RedWine,aes(free.sulfur.dioxide)) +
+  geom_histogram(fill = I("#099DD9"),
+                 color = "black") +
+  ggtitle("Distribution of free.sulfur.dioxide")
+```
+
+红酒中的二氧化硫通常是作为保护剂添加进去的，目的是防止微生物生长和葡萄酒的氧化；本数据集的红酒中游离二氧化硫含量主要集中在7~21mg/dm^3；
+```{r echo=FALSE}
+ggplot(RedWine,aes(density)) +
+  geom_histogram(fill = I("#099DD9"),
+                 color = "black") +
+  ggtitle("Distribution of density")
+```
+
+红酒密度分布呈正太分布的现象；
+
+# Univariate Analysis
+
+### What is the structure of your dataset?
+ 该数据集有1599个对象，13个变量。
+
+### What is/are the main feature(s) of interest in your dataset?
+首先，是该数据集中红酒的质量分布，它们是红酒品质最直接的数据；
+其次，对于红酒的酒精度数也是一个感兴趣点，想弄明白度数高低是否会影响红酒品质；
+还有就是红酒里残留的糖含量到底有多少才能使红酒品尝起来有点甜；
+
+### What other features in the dataset do you think will help support your investigation into your feature(s) of interest?
+红酒中的柠檬酸可以增加红酒的新鲜度和口味；
+红酒中的硫酸盐是一种添加剂，可促进SO2水平；
+
+### Did you create any new variables from existing variables in the dataset?
+新增加了一列数据，名为结合态的二氧化硫，由该数据集中的总二氧化硫减去游离的二氧化硫所得；
+
+### Of the features you investigated, were there any unusual distributions? Did you perform any operations on the data to tidy, adjust, or change the form of the data? If so, why did you do this?
+
+# Bivariate Plots Section
+```{r echo=FALSE,fig.width= 15,fig.height= 15}
+names(RedWine)
+RedWine_Sample <- RedWine[,c("fixed.acidity","volatile.acidity","citric.acid","residual.sugar","chlorides","free.sulfur.dioxide","total.sulfur.dioxide","density","pH","sulphates","alcohol","quality","Bound.sulfur.dioxide")]
+ggpairs(RedWine_Sample,lower = list(continuous = wrap("points",shape = I("."))),
+        upper = list(combo = wrap("box",outlier.shape = I("."))))
+```
+
+```{r echo=FALSE, Bivariate_Plots}
+ggplot(RedWine,aes(quality,fixed.acidity)) +
+  geom_point(alpha = 0.3,
+             position = position_jitter()) +
+  geom_boxplot(alpha = 0.5,aes(group = quality))
+```
+
+所有质量的酒石酸含量的中位数都在8附近，说明该数据集的红酒酒石酸的含量比较平均，且在质量为7左右达到最高。
+```{r echo=FALSE}
+ggplot(RedWine,aes(quality,residual.sugar)) +
+  geom_point(alpha = 0.1,
+             position = position_jitter()) +
+  geom_boxplot(alpha = 0.5,aes(group = quality)) +
+  scale_y_continuous(limits = c(0,8))
+```
+
+由图可知，红酒质量和残留的糖分多少并不是线型单挑关系，其中某一瓶质量为5的红酒其残留的糖分含量最高，达到15.5g/dm^3；该数据集中的大部分红酒所残留的糖分多数集中在质量为5,6两个子集中，且含量都在4以下，存在多数异常值。
+```{r echo=FALSE}
+ggplot(RedWine,aes(quality,density)) +
+  geom_point(alpha = 0.2,
+             position = position_jitter()) +
+  geom_boxplot(alpha = 0.5,
+               aes(group = quality))
+```
+
+红酒的平均密度由图可知差距在0.005内，数值并不大，说明各个质量的红酒其密度十分接近，其中有极少部分的密度值高于水的密度；质量为2时其平均密度最大(可能由于数据量较少的关系)，而在质量为8时，其平均密度最小。
+```{r echo=FALSE}
+ggplot(RedWine,aes(quality,pH)) +
+  geom_point(alpha = 0.2,
+             position = position_jitter()) +
+  geom_boxplot(alpha = .5,
+               aes(group = quality))
+```
+
+从图中我们可以清楚的看到，所有质量的红酒其pH值普遍在3~4之间，可见红葡萄酒属于酸性液体；
+```{r echo=FALSE}
+ggplot(RedWine,aes(quality,citric.acid)) +
+  geom_point(alpha = .2,
+             position = position_jitter()) +
+  geom_boxplot(alpha = .5,
+               aes(group = quality))
+```
+
+红酒中的柠檬酸平均随着质量的提高而上升；
+```{r echo=FALSE}
+ggplot(RedWine,aes(quality,alcohol)) +
+  geom_boxplot(alpha = .8,
+               aes(group = quality)) +
+  geom_point(alpha = .08,
+             position = position_jitter())
+```
+
+有图可知，红酒质量越高的话，其酒精度数也会高；不过似乎质量为5的红酒例外。质量为2,5,6存在异常值；
+```{r echo=FALSE}
+by(RedWine$alcohol,RedWine$quality,summary)
+```
+
+```{r echo=FALSE}
+ggplot(RedWine,aes(quality,sulphates)) +
+  geom_boxplot(alpha = .5,
+               aes(group = quality)) +
+  geom_point(alpha = .1,
+             position = position_jitter()) +
+  scale_y_continuous(limits = c(0.25,1))
+```
+
+可以看到每个质量组的中位数随着质量的提高，其硫酸盐的含量也跟着高；说明品质越高的红酒，其越需要硫酸盐作为添加进促进SO2的水平；质量为2,4,5,6,7存在异常值。
+```{r echo=FALSE}
+by(RedWine$sulphates,RedWine$quality,summary)
+```
+
+```{r echo=FALSE}
+ggplot(RedWine,aes(quality,total.sulfur.dioxide)) +
+  geom_boxplot(alpha = .5,
+               aes(group = quality)) +
+  scale_y_continuous(limits = c(0,170)) +
+  geom_point(alpha = .1,
+             position = position_jitter())
+```
+
+似乎质量为5的红酒中SO2的总量跨度最大，中位数也最大；说明在质量为5的红酒中二氧化硫的味道最浓；质量为4,6,7,8存在异常值；
+```{r echo=FALSE}
+by(RedWine$total.sulfur.dioxide,RedWine$quality,summary)
+```
+
+```{r echo=FALSE}
+ggplot(RedWine,aes(quality,residual.sugar)) +
+  geom_boxplot(alpha = .5,
+               aes(group = quality)) +
+  scale_y_continuous(limits = c(0,5)) +
+  geom_point(alpha = .08,
+             position = position_jitter())
+```
+
+各个质量组的红酒中残留的糖分看起来很平均，但其中质量为2的前25%数据集似乎很少，而且在质量为2,4,5,6,7的红酒中存在异常值；
+```{r echo=FALSE}
+by(RedWine$residual.sugar,RedWine$quality,summary)
+```
+
+
+# Bivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the investigation. How did the feature(s) of interest vary with other features in the dataset?
+
+红酒中的酒石酸含量普遍在8左右徘徊，与质量差异不明显；而在发酵后的残留糖分中，其数值大部分低于4g/dm^3；在各个质量组内，其密度差异性不大，在0.005范围内波动，表明在红酒中的酒精和糖含量的比例是固定的；大部分的红酒呈现酸性特质；由于红酒中的醋酸含量会影响品酒时的口感，可以从关系图中发现随着品质的提升，酒中挥发性酸度也随之降低；都说要想生活过得去，头上必须(开)有(个)点(玩)绿(笑)，柠檬酸在红酒中的作用就是增加其新鲜度和风味，从它和品质的关系图可以清楚得出结论；酒精度数最低的酒品质竟然是5；越高品质的红酒中，其亚硫酸的含量就越高，所以对其过敏的人群还是得注意饮酒；与酒精和品质关系类似，总SO2的浓度在质量为5时最高同时差别也是最大的；本人还是比较喜欢喝甜甜的红酒，但从其关系图中发现，残留的糖分与质量关系并不大；所有和质量相关联的变量似乎都或多或少存在差异现象。
+### Did you observe any interesting relationships between the other features (not the main feature(s) of interest)?
+我对所有与质量相关的变量都进行了绘图和分析。
+### What was the strongest relationship you found?
+pH值和红酒中的酒石酸含量之间的相关系数最大，0.68
+
+# Multivariate Plots Section
+
+```{r echo=FALSE, Multivariate_Plots}
+RedWine$alcohol.bucket <- with(RedWine,cut(alcohol,breaks = c(8.4,9.5,10.2,11.1,14.9)))
+ggplot(RedWine,aes(total.sulfur.dioxide,Bound.sulfur.dioxide,color = factor(quality))) +
+  geom_jitter(alpha = .08) +
+  geom_smooth(method = "lm",se = FALSE,size = 1) +
+  theme_dark() +
+  scale_color_brewer(type = "div",
+                     palette = "PuOr") +
+  coord_cartesian(ylim = c(0,150),
+                  xlim = c(0,200)) +
+  ggtitle("Bound(SO2) Vs Total(SO2) Vs Quality")
+```
+
+由图中各个回归线走势可知，在各个品质的红酒中，其总SO2含量和结合态SO2含量呈现单调递增关系；其中品质为7的两变量比值最大，说明在该品质红酒中游离的SO2含量最低；
+
+```{r echo=FALSE}
+ggplot(RedWine,aes(pH,fixed.acidity,
+                   color = factor(quality))) +
+  geom_jitter(alpha = .05) +
+  geom_smooth(method = "lm",se = FALSE,
+              size = 1) +
+  theme_dark() +
+  scale_color_brewer(type = "div",
+                     palette = "PuOr") +
+  ggtitle("pH Vs Fixed.acidity Vs Quality")
+```
+
+在该图中可以明显看出pH值和红酒中的酒石酸含量呈负相关性；其中又以品质为5的红酒变化最为明显，在一定程度上可以说明质量为5的红酒中pH值与酒石酸关系值最为密切。
+
+```{r echo=FALSE}
+ggplot(RedWine,aes(fixed.acidity,citric.acid,
+                   color = factor(quality))) +
+  geom_jitter(alpha = .2) +
+  geom_smooth(method = "lm",se = FALSE,size = 1) +
+  theme_dark() +
+  scale_color_brewer(type = "div",
+                     palette = "PuOr") +
+  ggtitle("Fixed.acidity Vs Citric.acid Vs Quality")
+```
+
+由图中回归线走势可知，在各个红酒品质中酒石酸含量与柠檬酸呈单调线型增长，相互之间有促进作用；其中又以质量为3的红酒中两者变化最为明显。
+
+# Multivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
+从对于多个变量进行探索性分析以及绘图可以明显看出，红酒的品质在酒精浓度一定的情况下，在红酒中的柠檬酸以及硫酸盐含量越来越高；而同样情况下，对于红酒口感有着明显负作用的酒石酸以及醋酸则会减弱红酒的品质。
+
+### Were there any interesting or surprising interactions between features?
+在对于数据进行仔细观察后发现一个有趣点，就是红酒中的酸碱度(ph值)跟挥发性酸度(酒石酸)有着很大的相关系数；
+
+### OPTIONAL: Did you create any models with your dataset? Discuss the strengths and limitations of your model.
+
+
+------
+
+# Final Plots and Summary
+
+### Plot One
+```{r echo=FALSE, Plot_One}
+ggplot(RedWine,aes(sulphates)) +
+  geom_histogram(fill = I("#099DD9"),
+                 color = "black") +
+  ggtitle("Distribution of sulphates") +
+  coord_cartesian(xlim = c(0.4,1.2)) +
+  labs(x = "Sulphates (g/dm3)")
+```
+
+### Description One
+红酒中的亚硫酸盐作为红酒发酵过程中的天然部分存在于酒中，同时也担当防腐的责任；其中白葡萄酒中的含量会高于红葡萄酒，甜点葡萄酒中的亚硫酸盐含量普遍会高；本数据集中的亚硫酸盐含量主要集中在0.55~0.73之间，该图存在单一波峰；
+
+### Plot Two
+```{r echo=FALSE, Plot_Two}
+ggplot(RedWine,aes(alcohol,density,
+                   color = factor(quality))) +
+  geom_jitter(alpha = .2) +
+  scale_color_brewer(palette = "Blues") +
+  geom_smooth(method = "lm",se = FALSE,size = 1) +
+  theme_dark() +
+  scale_color_brewer(type = "div",
+                     palette = "PuOr") +
+  coord_cartesian(ylim = c(0.985,1.005)) +
+  labs(x = "Alcohol (% by volume)",y = "Density (g/cm^3)") +
+  ggtitle("Density Vs Alcohol Vs Quality")
+```
+
+
+### Description Two
+同一品质的红酒中其酒精浓度随着密度的增加而减少，呈负相关性；且质量越高，其密度随酒精浓度变化越明显。
+
+### Plot Three
+```{r echo=FALSE, Plot_Three}
+cuberoot_trans = function() trans_new('cuberoot', transform = function(x) x^(1/3),
+                                      inverse = function(x) x^3)
+ggplot(RedWine,aes(fixed.acidity,pH,
+                   color = factor(quality))) +
+  geom_jitter(alpha = .2) +
+  geom_smooth(method = "lm",se = FALSE,size = 1) + 
+  theme_dark() +
+  scale_color_brewer(type = "div",
+                     palette = "PuOr") +
+  scale_x_continuous(trans = cuberoot_trans()) +
+  ggtitle("Fixed.acidity Vs pH Vs Quality") +
+  labs(x = "Fixed.acidity(g/dm^3)",
+       y = "pH")
+```
+
+
+### Description Three
+每种品质下的红酒其酒石酸含量与pH值为负增长关系；在一定程度上表明红酒的酸味与其酒石酸关系不大；
+------
+# Reflection
+  1.红酒作为葡萄酒中的一种，被全世界大部分人所接受甚至热爱；它起源于法国，流行于当代，尤其是对于品质高的红酒，其背后的身份象征和昂贵的价格已经演变成了一种共识。
+  
+  2.红酒成分虽十分简单，但影响其品质的因素却有不少；通过对这些成分因素的仔细钻研和摸索，可以发现有些成分对于红酒的品质和口感有提升作用，例如酒中的柠檬酸以及硫酸盐含量等；而有些成分则会降低了红酒的品质，如挥发性酸度(醋酸)，酒中的SO2浓度等等；
+  
+  3.在进行该项目的探索过程中，遇到了太多的困难与无助；其中尤其以多个变量探索分析过程中的艰难最为铭心，首先是对于红酒质量的加入作为第三个变量进行分析时，没有考虑到需将其转化为factor()，导致出来的图像中颜色没有梯度；还有就是在运用ggpairs函数时没有考虑到一些细节，比如设置图形大小等等，后来发现十分影响出来的图像效果；其他的还有在图像后添加一些文字说明，可以很好的帮助阅读者理解作者意图。
+  
+  4.对于该数据集的拓展，本人认为可以一些日常商店里的几类红酒的价格，然后做一次市场调查，看看各种阶级的家庭对于日常购买红酒需求的不同。
+  
+  5.都说红酒是“钻石”饮品，那么在最后，引用钻石界的一段名言来结束本次探索性分析，“钻石恒久远，红酒陪佳人”！
